@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { decodeJwt } from "jose";
 
 test("the workspace identifies the signed-in user independently of its partner", async ({ page, request }) => {
+  await page.clock.install();
   await page.route("**/embed/**", route => route.abort());
   const [session] = await Promise.all([
     page.waitForResponse(r => new URL(r.url()).pathname === "/api/host/session"),
@@ -21,10 +22,11 @@ test("the workspace identifies the signed-in user independently of its partner",
   expect((await request.get(new URL("/api/partner/forecast", host).href)).status()).toBe(404);
   expect((await request.get(new URL("/embed/overview", host).href)).status()).toBe(404);
 
+  await page.clock.fastForward(12_000);
   await page.unroute("**/embed/**");
   const [read] = await Promise.all([
     page.waitForResponse(r => new URL(r.url()).pathname === "/api/partner/forecast" && r.ok()),
-    page.reload(),
+    page.getByRole("button", { name: "Reconnect" }).click(),
   ]);
   const forecast = await read.json();
   expect(forecast.actor.name).toBe(actor.name);

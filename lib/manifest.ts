@@ -1,4 +1,5 @@
 import definition from "@/apps/test-app/app.manifest.json";
+import { partnerOrigin } from "./origins";
 
 export interface AppManifest {
   schemaVersion: number;
@@ -11,4 +12,6 @@ export interface AppManifest {
 }
 
 // A single reviewed release is bundled with the prototype.
-export const manifest: AppManifest = definition;
+export function installedManifest(): AppManifest {
+  return { ...definition, origin: partnerOrigin() };
+}
