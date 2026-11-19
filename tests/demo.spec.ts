@@ -18,6 +18,8 @@ test("the workspace identifies the signed-in user independently of its partner",
   const host = new URL(page.url());
   expect(partner.origin).not.toBe(host.origin);
   expect((await request.post(new URL("/api/host/session", partner).href)).status()).toBe(404);
+  expect((await request.post(new URL("/api/oauth/token", partner).href)).status()).toBe(404);
+  expect((await request.get(new URL("/apps/demand-forecast/overview", partner).href)).status()).toBe(404);
   expect((await request.get(new URL("/api/sales", partner).href)).status()).toBe(404);
   expect((await request.get(new URL("/api/partner/forecast", host).href)).status()).toBe(404);
   expect((await request.get(new URL("/embed/overview", host).href)).status()).toBe(404);

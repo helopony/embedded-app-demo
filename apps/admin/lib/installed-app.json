@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "demand-forecast",
+  "name": "Demand Forecast",
+  "origin": "https://forecast-partner.helopony.com",
+  "home": "/overview",
+  "bridgeVersion": 1,
+  "scopes": ["sales.summary.read"]
+}
