@@ -1,5 +1,5 @@
-import { isAppPath, parseOrigin, readHostMessage, sendPartnerMessage } from "./protocol.ts";
-import { readNavigation, watchNavigation } from "./navigation.ts";
+import { isAppPath, parseOrigin, readHostMessage, sendMessage } from "./protocol.js";
+import { readNavigation, watchNavigation } from "./navigation.js";
 
 export interface AppBridgeOptions {
   hostOrigin: string;
@@ -24,13 +24,13 @@ export function createAppBridge(options: AppBridgeOptions) {
   let destroyed = false;
 
   function hello() {
-    if (parent !== appWindow) sendPartnerMessage(parent, origin, { type: "app.hello", instance });
+    if (parent !== appWindow) sendMessage(parent, origin, { type: "app.hello", instance });
   }
   function publishNavigation() {
-    if (session) sendPartnerMessage(parent, origin, { type: "app.navigation", session, items: readNavigation() });
+    if (session) sendMessage(parent, origin, { type: "app.navigation", session, items: readNavigation() });
   }
   function request(id: string) {
-    if (session) sendPartnerMessage(parent, origin, { type: "app.assertion.request", session, id });
+    if (session) sendMessage(parent, origin, { type: "app.assertion.request", session, id });
   }
 
   function receive(event: MessageEvent) {
@@ -50,7 +50,7 @@ export function createAppBridge(options: AppBridgeOptions) {
         lastPath = message.path;
         options.onNavigate(message.path);
       } else if (!message.path && lastPath) {
-        sendPartnerMessage(parent, origin, { type: "app.route", session, path: lastPath });
+        sendMessage(parent, origin, { type: "app.route", session, path: lastPath });
       }
       for (const id of pending.keys()) request(id);
       return;
@@ -91,7 +91,7 @@ export function createAppBridge(options: AppBridgeOptions) {
       if (!isAppPath(path)) throw new TypeError("Expected an app-relative route.");
       if (destroyed || path === lastPath) return;
       lastPath = path;
-      if (session) sendPartnerMessage(parent, origin, { type: "app.route", session, path });
+      if (session) sendMessage(parent, origin, { type: "app.route", session, path });
     },
     destroy() {
       destroyed = true;

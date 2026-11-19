@@ -1,6 +1,6 @@
-import { isAppPath, parseOrigin, readPartnerMessage, sendHostMessage, type NavItem } from "./protocol.ts";
+import { isAppPath, parseOrigin, readPartnerMessage, sendMessage, type NavItem } from "./protocol.js";
 
-export type { NavItem } from "./protocol.ts";
+export type { NavItem } from "./protocol.js";
 
 export interface HostBridgeOptions {
   frame: HTMLIFrameElement;
@@ -21,7 +21,7 @@ export function createHostBridge(options: HostBridgeOptions) {
   let lastPath: string | undefined;
   let destroyed = false;
 
-  const probe = () => sendHostMessage(frame.contentWindow, origin, { type: "host.probe" });
+  const probe = () => sendMessage(frame.contentWindow, origin, { type: "host.probe" });
 
   async function answer(id: string, requestedSession: string) {
     onEvent?.("App requested a launch assertion");
@@ -32,7 +32,7 @@ export function createHostBridge(options: HostBridgeOptions) {
       // The app receives a generic failure. Server errors may contain private details.
     }
     if (destroyed || session !== requestedSession) return;
-    sendHostMessage(frame.contentWindow, origin, { type: "host.assertion.result", session, id, assertion });
+    sendMessage(frame.contentWindow, origin, { type: "host.assertion.result", session, id, assertion });
     onEvent?.(assertion ? "Host returned a launch assertion" : "Host declined the assertion");
   }
 
@@ -47,7 +47,7 @@ export function createHostBridge(options: HostBridgeOptions) {
         session = crypto.randomUUID();
       }
       if (!session) return;
-      sendHostMessage(frame.contentWindow, origin, {
+      sendMessage(frame.contentWindow, origin, {
         type: "host.welcome", instance: message.instance, session, path: lastPath,
       });
       if (first) {
@@ -83,7 +83,7 @@ export function createHostBridge(options: HostBridgeOptions) {
       if (!isAppPath(path)) throw new TypeError("Expected an app-relative route.");
       if (destroyed || path === lastPath) return;
       lastPath = path;
-      if (session) sendHostMessage(frame.contentWindow, origin, { type: "host.navigate", session, path });
+      if (session) sendMessage(frame.contentWindow, origin, { type: "host.navigate", session, path });
     },
     destroy() {
       destroyed = true;

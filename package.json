@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others --names admin,partner \"npm run dev -w @workspace/admin\" \"npm run dev -w @workspace/partner\"",
+    "dev": "concurrently --kill-others --names bridge,admin,partner \"npm run watch -w @workspace/bridge\" \"npm run dev -w @workspace/admin\" \"npm run dev -w @workspace/partner\"",
     "start": "concurrently --kill-others --names admin,partner \"npm run start -w @workspace/admin\" \"npm run start -w @workspace/partner\"",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces && tsc --noEmit",
-    "test": "node --test tests/bridge.test.mjs && npm test -w @workspace/admin",
+    "typecheck": "npm run build -w @workspace/bridge && npm run typecheck --workspaces && tsc --noEmit",
+    "test": "npm run build -w @workspace/bridge && node --test tests/bridge.test.mjs && npm test -w @workspace/admin",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

@@ -9,6 +9,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@workspace/bridge": "^0.1.0",
     "@workspace/ui": "*",
     "jose": "^6.2.18",
     "lucide-react": "^1.76.0",

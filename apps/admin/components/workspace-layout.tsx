@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 import { Boxes, ChartNoAxesColumnIncreasing, Check, ChevronRight, Circle, LayoutGrid, LoaderCircle, Plug, Terminal } from "lucide-react";
-import type { NavItem } from "@/bridge";
+import type { NavItem } from "@workspace/bridge/host";
 import type { WorkspaceSession } from "./use-workspace-session";
 
 export type ConnectionStatus = "connecting" | "connected" | "timeout";

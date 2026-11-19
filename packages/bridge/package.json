@@ -1,0 +1,28 @@
+{
+  "name": "@workspace/bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.js"
+    },
+    "./partner": {
+      "types": "./dist/partner.d.ts",
+      "import": "./dist/partner.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "watch": "tsc --watch --preserveWatchOutput"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

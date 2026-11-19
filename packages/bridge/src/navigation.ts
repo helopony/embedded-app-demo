@@ -1,4 +1,4 @@
-import { isNavItem, type NavItem } from "./protocol.ts";
+import { isNavItem, type NavItem } from "./protocol.js";
 
 const tag = "workspace-app-nav";
 const changed = "workspace:app-nav-change";
