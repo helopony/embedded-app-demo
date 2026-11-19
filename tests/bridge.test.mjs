@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
 import test from "node:test";
-import { createHostBridge } from "../apps/admin/bridge/index.ts";
-import { createAppBridge } from "../apps/partner/bridge/index.ts";
-import * as adminProtocol from "../apps/admin/bridge/protocol.ts";
-import * as partnerProtocol from "../apps/partner/bridge/protocol.ts";
+import { createHostBridge } from "@workspace/bridge/host";
+import { createAppBridge } from "@workspace/bridge/partner";
 
 const hostOrigin = "https://admin.example";
 const appOrigin = "https://partner.example";
@@ -51,20 +49,20 @@ function sandbox(t, getAssertion = async () => "signed-test-assertion") {
 
   let hostBridge, appBridge;
   const menus = [], hostRoutes = [], appRoutes = [], ready = [];
-  function startHost() {
+  function startHost(origin = appOrigin) {
     globalThis.window = host;
     hostBridge = createHostBridge({
-      frame, appOrigin, getAssertion,
+      frame, appOrigin: origin, getAssertion,
       onReady: () => ready.push(true),
       onNavigation: items => menus.push(items),
       onRoute: path => hostRoutes.push(path),
     });
     return hostBridge;
   }
-  function startApp() {
+  function startApp(origin = hostOrigin) {
     globalThis.window = app;
     appBridge = createAppBridge({
-      hostOrigin,
+      hostOrigin: origin,
       onNavigate(path) {
         appRoutes.push(path);
         // A UI router may report the new path after applying a host-initiated update.
@@ -185,20 +183,30 @@ test("unanswered authentication attempts have a bounded wait", async t => {
   await rejection;
 });
 
-test("protocol accepts app routes and rejects ambiguous origins and navigation", () => {
-  for (const { isAppPath, parseOrigin } of [adminProtocol, partnerProtocol]) {
-    assert.equal(parseOrigin("https://admin.example/"), hostOrigin);
-    assert.throws(() => parseOrigin("https://admin.example/apps"));
-    assert.equal(isAppPath("/forecasts?day=1#total"), true);
-    for (const path of ["https://partner.example", "//elsewhere.example", "/x/..//elsewhere", "/\\elsewhere"]) {
-      assert.equal(isAppPath(path), false);
-    }
+test("both entry points accept app routes and reject ambiguous origins and navigation", async t => {
+  const s = sandbox(t);
+  assert.throws(() => s.startHost(appOrigin + "/apps"), TypeError);
+  assert.throws(() => s.startApp(hostOrigin + "/apps"), TypeError);
+
+  const host = s.startHost(appOrigin + "/");
+  const app = s.startApp(hostOrigin + "/");
+  await setImmediate();
+  host.navigate("/forecasts?day=1#total");
+  await setImmediate();
+  assert.deepEqual(s.appRoutes, ["/forecasts?day=1#total"]);
+
+  for (const path of ["https://partner.example", "//elsewhere.example", "/x/..//elsewhere", "/\\elsewhere"]) {
+    assert.throws(() => host.navigate(path), TypeError);
+    assert.throws(() => app.routeChanged(path), TypeError);
   }
-  const envelope = { channel: "workspace.bridge", version: 1, session: "s" };
-  const nav = { ...envelope, type: "app.navigation", items: [] };
-  const go = { ...envelope, type: "host.navigate", path: "/overview" };
-  assert.equal(adminProtocol.readPartnerMessage({ ...nav, items: [{}] }), undefined);
-  assert.equal(partnerProtocol.readHostMessage({ ...go, path: "//elsewhere.example" }), undefined);
-  assert.equal(adminProtocol.readPartnerMessage(go), undefined);
-  assert.equal(partnerProtocol.readHostMessage(nav), undefined);
+
+  const { session } = s.sent.find(e => e.data.type === "host.welcome").data;
+  const envelope = { channel: "workspace.bridge", version: 1, session };
+  const nav = { ...envelope, type: "app.navigation", items: [{}] };
+  const go = { ...envelope, type: "host.navigate", path: "//elsewhere.example" };
+  const menuCount = s.menus.length;
+  dispatch(s.host, s.app, appOrigin, nav);
+  dispatch(s.app, s.host, hostOrigin, go);
+  assert.equal(s.menus.length, menuCount);
+  assert.deepEqual(s.appRoutes, ["/forecasts?day=1#total"]);
 });

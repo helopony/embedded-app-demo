@@ -1,7 +1,7 @@
 "use client";
 
 import { createElement, useEffect, useRef, useState } from "react";
-import { createAppBridge } from "@/bridge";
+import { createAppBridge } from "@workspace/bridge/partner";
 import { Authentication } from "./authentication";
 import { ForecastView } from "./forecast";
 import { readForecast, type Forecast } from "./forecast-data";

@@ -1,5 +1,5 @@
 import { decodeJwt, decodeProtectedHeader } from "jose";
-import type { createAppBridge } from "@/bridge";
+import type { createAppBridge } from "@workspace/bridge/partner";
 
 export type ForecastRow = { day: string; orders: number };
 

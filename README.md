@@ -15,17 +15,31 @@ The workspace opens its own session and displays the signed-in staff member and 
 
 ## Source layout
 
-This npm monorepo contains two Next.js apps. Each has its own `app/` route tree, server code and browser bridge. The only shared application package is the UI component library.
+This npm monorepo contains two independently deployed Next.js apps. Each owns its routes, server code and configuration. Both use the browser bridge library and the UI component package.
 
 | Workspace | Owns | Source |
 |---|---|---|
-| `apps/admin` | Outer header and sidebar, iframe, installed app record, staff sessions, token issuance and sales API | [Admin shell](apps/admin/components/admin-shell.tsx) · [Host bridge](apps/admin/bridge/index.ts) · [API routes](apps/admin/app/api) |
-| `apps/partner` | Embedded pages, menu declaration, assertion requests and forecast backend | [Partner app](apps/partner/components/partner-app.tsx) · [Partner bridge](apps/partner/bridge/index.ts) · [HTTP client](apps/partner/lib/forecast-client.ts) |
+| `apps/admin` | Outer header and sidebar, iframe, installed app record, staff sessions, token issuance and sales API | [Admin shell](apps/admin/components/admin-shell.tsx) · [API routes](apps/admin/app/api) |
+| `apps/partner` | Embedded pages, menu declaration, assertion requests and forecast backend | [Partner app](apps/partner/components/partner-app.tsx) · [HTTP client](apps/partner/lib/forecast-client.ts) |
+| `packages/bridge` | Browser handshake, origin and message validation, menu updates, routing and assertion requests | [Bridge library](packages/bridge) · [Interoperability tests](tests/bridge.test.mjs) |
 | `packages/ui` | Presentational components used by both apps | [UI package](packages/ui) |
 
 The partner declares its ID, name, origin, home route, bridge version and requested scopes in its manifest. Installation is mocked by keeping an approved copy in the admin's registry. Changing the partner file has no effect on the installed record until that record is updated. [Partner manifest](apps/partner/app.manifest.json) · [Admin installation record](apps/admin/lib/installed-app.json)
 
-For example, the admin route `/apps/demand-forecast/authentication` opens the partner route `/embed/authentication` on the partner origin. Inside the iframe, a `MutationObserver` watches the hidden `<workspace-app-nav>` element. After the handshake and on changes, the partner reads its direct links and sends their labels and paths in an `app.navigation` message. The admin validates the message and renders the links in its own sidebar. Clicking one updates the outer URL and sends `host.navigate` to the existing iframe. An in-app navigation travels back as `app.route`. [Navigation declaration reader](apps/partner/bridge/navigation.ts) · [Bridge interoperability tests](tests/bridge.test.mjs)
+## Using the bridge
+
+The framework-independent browser library ships ES modules and TypeScript declarations. Each deployment imports the entry point for its side of the iframe and exchanges versioned `postMessage` messages with the other window.
+
+| Import | Integration |
+|---|---|
+| `createHostBridge` from `@workspace/bridge/host` | Pass the iframe element, the installed partner origin, and callbacks for menu updates, route changes, readiness and issuing a launch assertion. Call `navigate(path)` when the user follows a sidebar link. |
+| `createAppBridge` from `@workspace/bridge/partner` | Pass the trusted admin origin and an `onNavigate` callback. Call `routeChanged(path)` after in-app navigation and `await getAssertion()` before an authenticated request. |
+
+For an app in another repository, run `npm pack -w @workspace/bridge` from the monorepo root, then install the resulting `.tgz` with `npm install <path-to-tarball>` in the external app. The tarball exposes the same imports as the workspace package.
+
+Create each bridge when its browser view mounts and call `destroy()` when it unmounts. The admin supplies the assertion through its first-party launch endpoint. The partner's OAuth client and credentials live in its backend. [Host integration](apps/admin/components/admin-shell.tsx) · [Partner integration](apps/partner/components/partner-app.tsx)
+
+For example, the admin route `/apps/demand-forecast/authentication` opens the partner route `/embed/authentication` on the partner origin. Inside the iframe, a `MutationObserver` watches the hidden `<workspace-app-nav>` element. After the handshake and on changes, the partner reads its direct links and sends their labels and paths in an `app.navigation` message. The admin validates the message and renders the links in its own sidebar. Clicking one updates the outer URL and sends `host.navigate` to the existing iframe. An in-app navigation travels back as `app.route`. [Navigation declaration reader](packages/bridge/src/navigation.ts)
 
 ## Authentication
 
@@ -68,7 +82,7 @@ For an installed desktop Chrome, use `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 
 ## Hosting
 
-Use two Vercel projects linked to this repository, each with the Next.js preset. Set the Root Directory to `apps/admin` on the workspace project and `apps/partner` on the partner project. Enable **Include source files outside of the Root Directory in the Build Step** on both so each build can import `packages/ui`. [Vercel monorepo settings](https://vercel.com/docs/monorepos/monorepo-faq)
+Use two Vercel projects linked to this repository, each with the Next.js preset. Set the Root Directory to `apps/admin` on the workspace project and `apps/partner` on the partner project. Enable **Include source files outside of the Root Directory in the Build Step** on both so each build can import `packages/bridge` and `packages/ui`. [Vercel monorepo settings](https://vercel.com/docs/monorepos/monorepo-faq)
 
 | Server setting | Admin project | Partner project |
 |---|---|---|

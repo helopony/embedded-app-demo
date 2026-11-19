@@ -15,7 +15,7 @@ type PartnerMessage =
   | { type: "app.route"; session: string; path: string }
   | { type: "app.assertion.request"; session: string; id: string };
 
-const CHANNEL = "workspace.bridge";
+const envelope = { channel: "workspace.bridge", version: 1 } as const;
 
 export function parseOrigin(value: string): string {
   const url = new URL(value);
@@ -42,17 +42,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isEnvelope(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && value.channel === envelope.channel && value.version === envelope.version;
+}
+
 function isIdentifier(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= 128;
 }
 
-function isNavItem(value: unknown): value is NavItem {
+export function isNavItem(value: unknown): value is NavItem {
   return isRecord(value) && typeof value.label === "string" &&
     value.label.trim().length > 0 && value.label.length <= 100 && isAppPath(value.path);
 }
 
+export function readHostMessage(value: unknown): HostMessage | undefined {
+  if (!isEnvelope(value)) return;
+  if (value.type === "host.probe") return { type: value.type };
+  const { session } = value;
+  if (!isIdentifier(session)) return;
+  switch (value.type) {
+    case "host.welcome":
+      if (isIdentifier(value.instance) && (value.path === undefined || isAppPath(value.path))) {
+        return { type: value.type, session, instance: value.instance, path: value.path };
+      }
+      break;
+    case "host.navigate":
+      if (isAppPath(value.path)) return { type: value.type, session, path: value.path };
+      break;
+    case "host.assertion.result":
+      if (isIdentifier(value.id) && (typeof value.assertion === "string" || value.assertion === null)) {
+        return { type: value.type, session, id: value.id, assertion: value.assertion };
+      }
+  }
+}
+
 export function readPartnerMessage(value: unknown): PartnerMessage | undefined {
-  if (!isRecord(value) || value.channel !== CHANNEL || value.version !== 1) return;
+  if (!isEnvelope(value)) return;
   if (value.type === "app.hello" && isIdentifier(value.instance)) {
     return { type: value.type, instance: value.instance };
   }
@@ -72,6 +97,6 @@ export function readPartnerMessage(value: unknown): PartnerMessage | undefined {
   }
 }
 
-export function sendHostMessage(peer: Window | null, origin: string, message: HostMessage): void {
-  peer?.postMessage({ channel: CHANNEL, version: 1, ...message }, origin);
+export function sendMessage(peer: Window | null, origin: string, message: HostMessage | PartnerMessage): void {
+  peer?.postMessage({ ...envelope, ...message }, origin);
 }

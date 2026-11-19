@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { createHostBridge, type NavItem } from "@/bridge";
+import { createHostBridge, type NavItem } from "@workspace/bridge/host";
 import type { AppManifest } from "@/lib/manifest";
 import { BridgeInspector, type BridgeEvent } from "./bridge-inspector";
 import { PartnerFrame } from "./partner-frame";
