@@ -2,6 +2,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { Boxes, ChartNoAxesColumnIncreasing, Check, ChevronRight, Circle, LayoutGrid, LoaderCircle, Plug, Terminal } from "lucide-react";
 import type { NavItem } from "@workspace/bridge/host";
 import type { WorkspaceSession } from "./use-workspace-session";
+import { ProjectGuide } from "./project-guide";
 
 export type ConnectionStatus = "connecting" | "connected" | "timeout";
 
@@ -106,6 +107,7 @@ export function WorkspaceLayout({ appName, session, connection, sidebar, childre
             </div>
             {typeof session === "object" && <BridgeStatus status={connection} />}
           </div>
+          <ProjectGuide />
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(245px,28%)]">{children}</div>
         </div>
       </section>
