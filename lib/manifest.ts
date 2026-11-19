@@ -1,4 +1,4 @@
-import definition from "@/apps/test-app/sides.app.json";
+import definition from "@/apps/test-app/app.manifest.json";
 
 export interface AppManifest {
   schemaVersion: number;

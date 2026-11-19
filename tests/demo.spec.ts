@@ -1,7 +1,42 @@
 import { expect, test } from "@playwright/test";
 import { decodeJwt } from "jose";
 
-test("the iframe authenticates and contributes a live menu to SIDES", async ({ page }) => {
+test("the workspace identifies the signed-in user independently of its partner", async ({ page, request }) => {
+  await page.route("**/embed/**", route => route.abort());
+  const [session] = await Promise.all([
+    page.waitForResponse(r => new URL(r.url()).pathname === "/api/host/session"),
+    page.goto("/"),
+  ]);
+  expect(session.ok()).toBe(true);
+  const { actor, store } = await session.json();
+  const header = page.getByRole("group", { name: "Workspace session" });
+  await expect(header).toContainText("Signed in as");
+  await expect(header).toContainText(actor.name);
+  await expect(header).toContainText(store.name);
+  const partner = new URL((await page.getByTitle("Demand Forecast partner app").getAttribute("src"))!);
+  const host = new URL(page.url());
+  expect(partner.origin).not.toBe(host.origin);
+  expect((await request.post(new URL("/api/host/session", partner).href)).status()).toBe(404);
+  expect((await request.get(new URL("/api/sales", partner).href)).status()).toBe(404);
+  expect((await request.get(new URL("/api/partner/forecast", host).href)).status()).toBe(404);
+  expect((await request.get(new URL("/embed/overview", host).href)).status()).toBe(404);
+
+  await page.unroute("**/embed/**");
+  const [read] = await Promise.all([
+    page.waitForResponse(r => new URL(r.url()).pathname === "/api/partner/forecast" && r.ok()),
+    page.reload(),
+  ]);
+  const forecast = await read.json();
+  expect(forecast.actor.name).toBe(actor.name);
+  expect(forecast.store.name).toBe(store.name);
+  const bearer = await read.request().headerValue("authorization");
+  if (!bearer?.startsWith("Bearer ")) throw new Error("The iframe did not receive its launch assertion.");
+  const claims = decodeJwt(bearer.slice("Bearer ".length));
+  expect(claims.sub).toBe(actor.id);
+  expect(claims.store_id).toBe(store.id);
+});
+
+test("the iframe authenticates and contributes a live menu to the workspace", async ({ page }) => {
   await page.goto("/");
   const iframe = page.frameLocator('iframe[title="Demand Forecast partner app"]');
   const nav = page.getByRole("navigation", { name: "Installed app navigation" });
@@ -14,7 +49,7 @@ test("the iframe authenticates and contributes a live menu to SIDES", async ({ p
   expect(new URL(partnerUrl!).origin).not.toBe(new URL(page.url()).origin);
 
   await expect(forecast).toBeVisible();
-  const publish = iframe.getByRole("checkbox", { name: "Show Forecast in SIDES menu" });
+  const publish = iframe.getByRole("checkbox", { name: "Show Forecast in workspace menu" });
   await publish.uncheck();
   await expect(forecast).toHaveCount(0);
   await publish.check();
@@ -48,12 +83,16 @@ test("opening the partner directly in the same browser demonstrates a denied rea
   expect(await denied.request().headerValue("authorization") === null).toBe(true);
   expect(denied.status()).toBe(401);
   expect((await denied.json()).error).toBe("launch_assertion_required");
-  await expect(standalone.getByRole("heading", { name: "SIDES session required" })).toBeVisible();
+  await expect(standalone.getByRole("heading", { name: "Workspace session required" })).toBeVisible();
   await expect(standalone.getByText("HTTP 401", { exact: true })).toBeVisible();
   await expect(standalone.getByText("launch_assertion_required", { exact: true })).toBeVisible();
   await expect(standalone.getByText("Alex Morgan", { exact: true })).toHaveCount(0);
   await expect(standalone.getByRole("figure", { name: "Expected orders by day" })).toHaveCount(0);
   expect((await request.get(new URL("/api/sales", baseURL).href)).status()).toBe(401);
+  const partnerOrigin = new URL(standalone.url()).origin;
+  await standalone.goto(partnerOrigin);
+  expect(new URL(standalone.url()).origin).toBe(partnerOrigin);
+  await expect(standalone.getByText("launch_assertion_required", { exact: true })).toBeVisible();
 });
 
 test("Authentication shows the current assertion and the server's authorization result", async ({ page }) => {

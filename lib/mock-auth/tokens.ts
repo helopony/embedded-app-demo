@@ -7,18 +7,23 @@ export const EXCHANGE_GRANT = "urn:ietf:params:oauth:grant-type:token-exchange";
 export const JWT_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 export const ACCESS_TYPE = "urn:ietf:params:oauth:token-type:access_token";
 
-const ISSUER = "urn:sides:demo:identity";
+const ISSUER = "urn:workspace:demo:identity";
 // This stateless demo has one public, synthetic staff/store grant. Proofs can be
 // replayed until their short expiry; a production grant and one-use launch
 // assertion would require an authoritative store shared across instances.
-const ACTOR_ID = "staff_alex";
+export const demoIdentity = {
+  actor: { id: "staff_alex", name: "Alex Morgan" },
+  store: { id: "store_berlin_mitte", name: "Berlin Mitte" },
+};
+
+export type WorkspaceIdentity = typeof demoIdentity;
+
 const INSTALLATION_ID = "installation_berlin_demo";
-const STORE_ID = "store_berlin_mitte";
 
 const profiles = {
-  session: { type: "sides-session+jwt", audience: "urn:sides:admin", seconds: 8 * 3600 },
-  launch: { type: "sides-launch+jwt", audience: CLIENT_ID, seconds: 60 },
-  access: { type: "at+jwt", audience: "urn:sides:partner-api", seconds: 120 },
+  session: { type: "workspace-session+jwt", audience: "urn:workspace:admin", seconds: 8 * 3600 },
+  launch: { type: "workspace-launch+jwt", audience: CLIENT_ID, seconds: 60 },
+  access: { type: "at+jwt", audience: "urn:workspace:partner-api", seconds: 120 },
 } as const;
 
 type TokenKind = keyof typeof profiles;
@@ -46,12 +51,12 @@ export function createTokenService(signingSecret: string, now = () => new Date()
     return new SignJWT({
       sid: sessionId,
       installation_id: INSTALLATION_ID,
-      store_id: STORE_ID,
+      store_id: demoIdentity.store.id,
       ...(kind === "access" && { scope: SALES_SCOPE, client_id: CLIENT_ID }),
     })
       .setProtectedHeader({ alg: "HS256", typ: type })
       .setIssuer(ISSUER)
-      .setSubject(ACTOR_ID)
+      .setSubject(demoIdentity.actor.id)
       .setAudience(audience)
       .setJti(randomUUID())
       .setIssuedAt(issuedAt)
@@ -66,14 +71,14 @@ export function createTokenService(signingSecret: string, now = () => new Date()
       typ: type,
       issuer: ISSUER,
       audience,
-      subject: ACTOR_ID,
+      subject: demoIdentity.actor.id,
       currentDate: now(),
       requiredClaims: ["exp", "iat", "jti", "sid", "installation_id", "store_id"],
     });
     if (
       payload.aud !== audience ||
       payload.installation_id !== INSTALLATION_ID ||
-      payload.store_id !== STORE_ID ||
+      payload.store_id !== demoIdentity.store.id ||
       typeof payload.sid !== "string" ||
       !payload.sid
     ) throw new Error("Unknown demo grant.");
@@ -82,6 +87,10 @@ export function createTokenService(signingSecret: string, now = () => new Date()
 
   return {
     newSession: () => sign("session", randomUUID()),
+    async identity(session: string) {
+      await verify(session, "session");
+      return demoIdentity;
+    },
     async launch(session: string) {
       const claims = await verify(session, "session");
       return sign("launch", claims.sessionId);

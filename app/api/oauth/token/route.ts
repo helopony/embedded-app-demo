@@ -8,7 +8,7 @@ import {
 export async function POST(request: Request) {
   if (!isHostOrigin(requestOrigin(request))) return json({ error: "not_found" }, 404);
   if (!validClientAuthorization(request.headers.get("authorization"), clientSecret())) {
-    return json({ error: "invalid_client" }, 401, { "WWW-Authenticate": 'Basic realm="sides-demo"' });
+    return json({ error: "invalid_client" }, 401, { "WWW-Authenticate": 'Basic realm="workspace-demo"' });
   }
   if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/x-www-form-urlencoded") {
     return json({ error: "invalid_request" }, 400);

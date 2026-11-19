@@ -115,7 +115,7 @@ test("native nav declaration publishes validated direct anchors and subsequent D
   function link(text, path, localName = "a") {
     return { localName, textContent: text, getAttribute: () => path };
   }
-  const menu = new (s.elements.get("sides-app-nav"))();
+  const menu = new (s.elements.get("workspace-app-nav"))();
   s.doc.menu = menu;
   menu.children = [
     link(" Overview ", "/overview"), link("Duplicate", "/overview"),
@@ -190,5 +190,5 @@ test("protocol accepts app routes and rejects ambiguous origins and navigation",
   for (const path of ["https://partner.example", "//elsewhere.example", "/x/..//elsewhere", "/\\elsewhere"]) {
     assert.equal(isAppPath(path), false);
   }
-  assert.equal(readMessage({ channel: "sides.bridge", version: 1, type: "app.navigation", session: "s", items: [{}] }), undefined);
+  assert.equal(readMessage({ channel: "workspace.bridge", version: 1, type: "app.navigation", session: "s", items: [{}] }), undefined);
 });

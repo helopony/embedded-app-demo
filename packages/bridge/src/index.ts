@@ -137,7 +137,7 @@ export function createAppBridge(options: AppBridgeOptions) {
     if (message.type === "host.welcome") {
       if (message.instance !== instance || message.session === session) return;
       session = message.session;
-      options.onEvent?.("Connected to SIDES");
+      options.onEvent?.("Connected to workspace");
       publishNavigation();
       if (message.path && message.path !== lastPath) {
         lastPath = message.path;

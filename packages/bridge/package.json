@@ -1,5 +1,5 @@
 {
-  "name": "@sides/bridge",
+  "name": "@workspace/bridge",
   "version": "0.1.0",
   "private": true,
   "type": "module",

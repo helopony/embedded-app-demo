@@ -2,7 +2,7 @@
 
 import { createElement, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarDays, ChartNoAxesColumnIncreasing, CircleAlert, Fingerprint, LoaderCircle, RefreshCw } from "lucide-react";
-import { createAppBridge } from "@sides/bridge";
+import { createAppBridge } from "@workspace/bridge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -110,7 +110,7 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
     !top || row.orders > top.orders ? row : top, undefined);
 
   return <main className="min-h-screen bg-white px-4 py-5 text-slate-900 sm:px-6 sm:py-6">
-    {createElement("sides-app-nav", { hidden: true },
+    {createElement("workspace-app-nav", { hidden: true },
       <a href="/overview">Overview</a>,
       publishForecast ? <a href="/forecast">Forecast</a> : null,
       <a href="/authentication">Authentication</a>
@@ -120,7 +120,7 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
     </div>
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-[26px] font-semibold tracking-tight">{isAuthentication ? "Authentication" : isForecast ? "Order forecast" : "Overview"}</h1>
-        <p className="mt-1 text-sm text-slate-600">{isAuthentication ? "What SIDES shared for this request" : data ? data.store.name : "Restaurant demand planning"}</p>
+        <p className="mt-1 text-sm text-slate-600">{isAuthentication ? "What the workspace shared for this request" : data ? data.store.name : "Restaurant demand planning"}</p>
       </div>
       {data && <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)} aria-label={isAuthentication ? "Run authentication again" : "Refresh forecast data"}>
         <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> {isAuthentication ? "Run authentication again" : "Refresh"}
@@ -156,11 +156,11 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
         <Fingerprint size={14} className="text-emerald-700" /><span>Authenticated as <strong className="font-medium text-slate-800">{data.actor.name}</strong></span><code className="rounded bg-slate-100 px-1.5 py-0.5">{data.scope}</code>
         <button type="button" className="font-medium text-emerald-700 underline underline-offset-2" onClick={() => navigate("/authentication")}>Inspect authentication</button>
       </div>
-    </> : <p role="status" className="flex items-center gap-2 rounded-lg border border-slate-200 p-4 text-sm text-slate-600"><LoaderCircle size={16} className="animate-spin" /> Authenticating with SIDES…</p>}
+    </> : <p role="status" className="flex items-center gap-2 rounded-lg border border-slate-200 p-4 text-sm text-slate-600"><LoaderCircle size={16} className="animate-spin" /> Authenticating with the workspace…</p>}
     {!standalone && !isAuthentication && <label className="mt-4 inline-flex min-h-8 cursor-pointer items-center gap-2 text-xs text-slate-600">
       <input type="checkbox" checked={publishForecast} onChange={event => setPublishForecast(event.target.checked)}
         className="size-4 shrink-0 accent-emerald-700" />
-      Show Forecast in SIDES menu
+      Show Forecast in workspace menu
     </label>}
   </main>;
 }

@@ -1,7 +1,7 @@
 import { isHostOrigin } from "@/lib/origins";
 import { bearer, json, requestOrigin } from "@/lib/mock-auth/http";
 import { tokenService } from "@/lib/mock-auth/runtime";
-import { SALES_SCOPE } from "@/lib/mock-auth/tokens";
+import { demoIdentity, SALES_SCOPE } from "@/lib/mock-auth/tokens";
 
 export async function GET(request: Request) {
   if (!isHostOrigin(requestOrigin(request))) return json({ error: "not_found" }, 404);
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
   }
 
   return json({
-    store: { name: "Berlin Mitte" },
-    actor: { name: "Alex Morgan" },
+    store: { name: demoIdentity.store.name },
+    actor: { name: demoIdentity.actor.name },
     scope: SALES_SCOPE,
     rows: [
       { day: "Monday", orders: 84 },

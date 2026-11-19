@@ -1,5 +1,5 @@
 {
-  "name": "sides-app-prototype",
+  "name": "embedded-app-demo",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -10,11 +10,11 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "npm run test --workspace @sides/bridge && node --import tsx --test lib/mock-auth/tokens.test.ts",
+    "test": "npm run test --workspace @workspace/bridge && node --import tsx --test lib/mock-auth/tokens.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@sides/bridge": "*",
+    "@workspace/bridge": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "jose": "^6.2.18",

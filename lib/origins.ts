@@ -10,17 +10,17 @@ function configuredOrigin(value: string) {
 }
 
 export function hostApiOrigin() {
-  return configuredOrigin(process.env.SIDES_HOST_ORIGIN ?? (process.env.VERCEL ? "https://sides-app-chi.vercel.app" : "http://localhost:3000"));
+  return configuredOrigin(process.env.WORKSPACE_HOST_ORIGIN ?? (process.env.VERCEL ? "https://app-workspace.helopony.com" : "http://localhost:3000"));
 }
 
 export function partnerOrigin() {
-  const origin = configuredOrigin(process.env.SIDES_PARTNER_ORIGIN ?? (process.env.VERCEL ? manifest.origin : "http://127.0.0.1:3000"));
+  const origin = configuredOrigin(process.env.WORKSPACE_PARTNER_ORIGIN ?? (process.env.VERCEL ? manifest.origin : "http://127.0.0.1:3000"));
   if (origin === hostApiOrigin()) throw new Error("The host and partner must use different origins.");
   return origin;
 }
 
 export function trustedHostOrigins() {
-  const extra = (process.env.SIDES_EXTRA_HOST_ORIGINS ?? "").split(",").map(item => item.trim()).filter(Boolean);
+  const extra = (process.env.WORKSPACE_EXTRA_HOST_ORIGINS ?? "").split(",").map(item => item.trim()).filter(Boolean);
   const all = [...new Set([hostApiOrigin(), ...extra.map(configuredOrigin)])];
   if (all.includes(partnerOrigin())) throw new Error("Partner origin cannot be a trusted host origin.");
   return all;

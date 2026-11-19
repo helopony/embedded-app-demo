@@ -1,7 +1,7 @@
 import { isNavItem, type NavItem } from "./protocol.ts";
 
-const tag = "sides-app-nav";
-const changed = "sides:app-nav-change";
+const tag = "workspace-app-nav";
+const changed = "workspace:app-nav-change";
 
 function registerNavigation(): void {
   if (customElements.get(tag)) return;

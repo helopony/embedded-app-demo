@@ -3,27 +3,28 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { Activity, ArrowUpRight, Boxes, ChartNoAxesColumnIncreasing, Check, ChevronRight, Circle, LayoutGrid, Link2, LoaderCircle, Plug, RotateCw, Terminal } from "lucide-react";
-import { createHostBridge, type NavItem } from "@sides/bridge";
+import { createHostBridge, type NavItem } from "@workspace/bridge";
 import type { AppManifest } from "@/lib/manifest";
-import { Badge } from "@/components/ui/badge";
+import type { WorkspaceIdentity } from "@/lib/mock-auth/tokens";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 type Props = { appOrigin: string; manifest: AppManifest; initialPath: string };
+type HostSession = "loading" | "unavailable" | { origin: string; identity: WorkspaceIdentity };
 type EventEntry = { id: number; label: string; time: string };
 
 function Walkthrough() {
   return <ol aria-label="How the prototype works" className="list-decimal space-y-4 py-4 pr-4 pl-9 text-sm leading-relaxed text-slate-600 marker:font-mono marker:text-emerald-700">
-    <li><h3 className="font-semibold text-slate-900">SIDES opens the partner</h3>
-      The installed manifest gives SIDES the partner origin, home route and requested permissions. The admin loads the app in a cross-origin iframe.</li>
+    <li><h3 className="font-semibold text-slate-900">The workspace opens the partner</h3>
+      The installed manifest gives the host the partner origin, home route and requested permissions. The admin loads the app in a cross-origin iframe.</li>
     <li><h3 className="font-semibold text-slate-900">The app publishes its menu</h3>
-      Inside the iframe, a <code>MutationObserver</code> watches <code>&lt;sides-app-nav&gt;</code>. The bridge sends link labels and paths through <code>postMessage</code>. Each side checks the sender’s origin and window. SIDES renders the sidebar.</li>
-    <li><h3 className="font-semibold text-slate-900">SIDES identifies the session</h3>
-      The iframe asks for a launch assertion. The host sends its first-party session cookie to its own backend and gives the iframe a signed, 60-second JWT identifying the demo staff member, store and app installation.</li>
+      Inside the iframe, a <code>MutationObserver</code> watches <code>&lt;workspace-app-nav&gt;</code>. The bridge sends link labels and paths through <code>postMessage</code>. Each side checks the sender’s origin and window. The host renders the sidebar.</li>
+    <li><h3 className="font-semibold text-slate-900">The host identifies the session</h3>
+      Before loading the iframe, the host reads the staff and workspace shown in its header from a first-party session. When the iframe requests a launch assertion, the same session cookie authorizes a signed, 60-second JWT for that staff member, store and app installation.</li>
     <li><h3 className="font-semibold text-slate-900">The partner reads sales</h3>
-      The partner server presents the assertion and its client credentials at the OAuth token endpoint. SIDES verifies them and issues a scoped access token for the sales API. Open <strong>Authentication</strong> in the sidebar to inspect the claims and both HTTP results.</li>
+      The partner server presents the assertion and its client credentials at the OAuth token endpoint. The host verifies them and issues a scoped access token for the sales API. Open <strong>Authentication</strong> in the sidebar to inspect the claims and both HTTP results.</li>
     <li><h3 className="font-semibold text-slate-900">Try a direct visit</h3>
-      Choose <strong>Open partner app directly</strong>. In its own tab the partner has no SIDES parent to issue an assertion. Its forecast endpoint returns HTTP 401 with <code className="break-all">launch_assertion_required</code>.</li>
+      Choose <strong>Open partner app directly</strong>. In its own tab the partner has no workspace window to issue an assertion. Its forecast endpoint returns HTTP 401 with <code className="break-all">launch_assertion_required</code>.</li>
   </ol>;
 }
 
@@ -40,7 +41,8 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
   const bridge = useRef<ReturnType<typeof createHostBridge> | null>(null);
   const activePath = useRef(initialPath);
   const logId = useRef(0);
-  const [hostOrigin, setHostOrigin] = useState("");
+  const [hostSession, setHostSession] = useState<HostSession>("loading");
+  const hostOrigin = typeof hostSession === "object" ? hostSession.origin : "";
   const [framePath, setFramePath] = useState(initialPath);
   const [path, setPath] = useState(initialPath);
   const [navigation, setNavigation] = useState<NavItem[]>([]);
@@ -49,7 +51,21 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
   const [events, setEvents] = useState<EventEntry[]>([]);
   const [inspector, setInspector] = useState<"How it works" | "Events" | "Manifest">("How it works");
 
-  useEffect(() => { setHostOrigin(window.location.origin); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadHostSession() {
+      const response = await fetch("/api/host/session", {
+        method: "POST", credentials: "same-origin", cache: "no-store", signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Workspace session unavailable.");
+      const identity: WorkspaceIdentity = await response.json();
+      if (!controller.signal.aborted) setHostSession({ identity, origin: window.location.origin });
+    }
+    loadHostSession().catch(() => {
+      if (!controller.signal.aborted) setHostSession("unavailable");
+    });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const frame = iframe.current;
@@ -82,10 +98,10 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
         const response = await fetch("/api/host/launch", {
           method: "POST", cache: "no-store", signal: controller.signal
         });
-        if (!response.ok) throw new Error("SIDES could not issue a launch assertion.");
+        if (!response.ok) throw new Error("The host could not issue a launch assertion.");
         const { assertion } = await response.json();
         if (typeof assertion !== "string") throw new Error("The launch service returned an invalid response.");
-        record("SIDES issued a demo launch assertion");
+        record("The host issued a demo launch assertion");
         return assertion;
       },
       onEvent: record
@@ -136,7 +152,7 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
       <aside className="flex flex-col bg-[#172923] px-5 py-5 text-white lg:sticky lg:top-0 lg:h-screen lg:py-7">
         <div className="flex items-center gap-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#d7ef8b] text-[#172923]"><Boxes size={21} /></div>
-          <div><p className="text-lg font-bold leading-none tracking-tight">SIDES</p><p className="mt-1 text-xs text-[#b4c6bd]">Administration</p></div>
+          <div><p className="text-lg font-bold leading-none tracking-tight">Workspace</p><p className="mt-1 text-xs text-[#b4c6bd]">Administration</p></div>
         </div>
         <nav aria-label="Installed app navigation" className="mt-6 lg:mt-12">
           <p className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-[#aec0b7] uppercase">Installed apps</p>
@@ -149,23 +165,28 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
                 <Circle aria-hidden size={7} className={path === item.path ? "fill-[#d7ef8b] text-[#d7ef8b]" : ""} />{item.label}
               </a>
             ))}
-            {navigation.length === 0 && <span className="px-2 py-1 text-xs text-[#b4c6bd]">{connection === "timeout" ? "App unavailable" : "Loading app menu…"}</span>}
+            {navigation.length === 0 && <span className="px-2 py-1 text-xs text-[#b4c6bd]">{connection === "timeout" || hostSession === "unavailable" ? "App unavailable" : "Loading app menu…"}</span>}
           </div>
         </nav>
         <div className="mt-auto hidden items-center gap-2 border-t border-white/10 pt-5 text-xs text-[#c4d3ca] lg:flex"><Terminal size={15} /> Developer sandbox</div>
       </aside>
       <section className="min-w-0">
-        <header className="flex min-h-14 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-7">
+        <header className="flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-slate-200 bg-white px-4 py-2.5 sm:px-7">
           <div className="flex items-center gap-2 text-sm text-slate-500"><LayoutGrid size={15} /><span>Workspace</span><ChevronRight size={13} /><span className="font-medium text-slate-800">Apps</span></div>
-          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-600">Mock backend</Badge>
+          <div role="group" aria-label="Workspace session" className="text-xs leading-relaxed text-slate-600">
+            {typeof hostSession === "object" ? <>
+              <p>Signed in as <strong className="font-semibold text-slate-900">{hostSession.identity.actor.name}</strong></p>
+              <p>Workspace <span className="font-medium text-slate-800">{hostSession.identity.store.name}</span></p>
+            </> : hostSession === "loading" ? <span>Loading workspace session…</span> : <span>Workspace session unavailable</span>}
+          </div>
         </header>
         <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-7 lg:py-8">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{manifest.name}</h1><p className="mt-1.5 text-sm text-slate-600">Partner app workspace</p></div>
-            <span role="status" className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            {hostOrigin && <span role="status" className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
               {connection === "connected" ? <Check size={16} className="text-emerald-700" /> : connection === "connecting" ? <LoaderCircle size={15} className="animate-spin" /> : <Plug size={15} />}
               {connection === "connected" ? "Bridge connected" : connection === "connecting" ? "Connecting bridge" : "Connection timed out"}
-            </span>
+            </span>}
           </div>
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(245px,28%)]">
             <Card className="block min-w-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-sm">
@@ -180,7 +201,12 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
               </div>}
               {hostOrigin ? <iframe key={attempt} ref={iframe} title={manifest.name + " partner app"} src={partnerUrl(framePath)}
                 sandbox="allow-scripts allow-same-origin" referrerPolicy="origin" className="block h-[650px] w-full border-0 sm:h-[600px]" /> :
-                <div className="grid h-[650px] place-items-center text-sm text-slate-500 sm:h-[600px]">Opening partner app…</div>}
+                <div className="grid h-[650px] place-content-center gap-3 px-4 text-center text-sm text-slate-600 sm:h-[600px]">
+                  {hostSession === "unavailable" ? <>
+                    <p role="alert">The workspace session could not be loaded.</p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry workspace session</Button>
+                  </> : "Opening partner app…"}
+                </div>}
             </Card>
             <Card className="block min-w-0 gap-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-sm">
               <div className="border-b border-slate-200 px-4 py-4"><h2 className="flex items-center gap-2 font-semibold"><Activity size={16} className="text-emerald-700" /> Bridge inspector</h2></div>

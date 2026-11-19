@@ -12,7 +12,7 @@ type Message =
   | { type: "app.assertion.request"; session: string; id: string }
   | { type: "host.assertion.result"; session: string; id: string; assertion: string | null };
 
-const CHANNEL = "sides.bridge";
+const CHANNEL = "workspace.bridge";
 
 export function parseOrigin(value: string): string {
   const url = new URL(value);

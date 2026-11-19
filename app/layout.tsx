@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SIDES · App bridge demo",
-  description: "An interactive prototype of an independently hosted partner app inside a restaurant admin.",
+  title: "Embedded app demo",
+  description: "A workspace and an independently hosted partner app exchange identity and navigation across two browser origins.",
   robots: { index: false, follow: false },
 };
 
