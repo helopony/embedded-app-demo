@@ -1,4 +1,4 @@
-import { manifest } from "./manifest";
+import definition from "@/apps/test-app/app.manifest.json";
 
 function configuredOrigin(value: string) {
   const parsed = new URL(value);
@@ -14,7 +14,7 @@ export function hostApiOrigin() {
 }
 
 export function partnerOrigin() {
-  const origin = configuredOrigin(process.env.WORKSPACE_PARTNER_ORIGIN ?? (process.env.VERCEL ? manifest.origin : "http://127.0.0.1:3000"));
+  const origin = configuredOrigin(process.env.WORKSPACE_PARTNER_ORIGIN ?? (process.env.VERCEL ? definition.origin : "http://127.0.0.1:3000"));
   if (origin === hostApiOrigin()) throw new Error("The host and partner must use different origins.");
   return origin;
 }

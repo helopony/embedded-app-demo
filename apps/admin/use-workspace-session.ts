@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WorkspaceIdentity } from "@/lib/mock-auth/tokens";
 
-export type WorkspaceSession = "loading" | "unavailable" | { origin: string; identity: WorkspaceIdentity };
+export type WorkspaceSession = "loading" | "unavailable" | WorkspaceIdentity;
 
 export function useWorkspaceSession() {
   const [session, setSession] = useState<WorkspaceSession>("loading");
@@ -14,7 +14,7 @@ export function useWorkspaceSession() {
       });
       if (!response.ok) throw new Error("Workspace session unavailable.");
       const identity: WorkspaceIdentity = await response.json();
-      if (!controller.signal.aborted) setSession({ identity, origin: window.location.origin });
+      if (!controller.signal.aborted) setSession(identity);
     }
     loadSession().catch(() => {
       if (!controller.signal.aborted) setSession("unavailable");

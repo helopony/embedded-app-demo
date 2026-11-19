@@ -69,8 +69,8 @@ function WorkspaceHeader({ session }: { session: WorkspaceSession }) {
       </div>
       <div role="group" aria-label="Workspace session" className="text-xs leading-relaxed text-slate-600">
         {typeof session === "object" ? <>
-          <p>Signed in as <strong className="font-semibold text-slate-900">{session.identity.actor.name}</strong></p>
-          <p>Workspace <span className="font-medium text-slate-800">{session.identity.store.name}</span></p>
+          <p>Signed in as <strong className="font-semibold text-slate-900">{session.actor.name}</strong></p>
+          <p>Workspace <span className="font-medium text-slate-800">{session.store.name}</span></p>
         </> : <span>{session === "loading" ? "Loading workspace session…" : "Workspace session unavailable"}</span>}
       </div>
     </header>

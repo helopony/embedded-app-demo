@@ -3,21 +3,19 @@ import { ChartNoAxesColumnIncreasing, CircleAlert, LoaderCircle, RefreshCw } fro
 import { Button } from "@/components/ui/button";
 
 type PartnerLayoutProps = {
-  navigation: ReactNode;
   children: ReactNode;
   path: string;
   storeName?: string;
   onRefresh?: () => void;
 };
 
-export function PartnerLayout({ navigation, children, path, storeName, onRefresh }: PartnerLayoutProps) {
+export function PartnerLayout({ children, path, storeName, onRefresh }: PartnerLayoutProps) {
   const authentication = path === "/authentication";
   const title = authentication ? "Authentication" : path === "/forecast" ? "Order forecast" : "Overview";
   const subtitle = authentication ? "What the workspace shared for this request" : storeName ?? "Restaurant demand planning";
 
   return (
     <main className="min-h-screen bg-white px-4 py-5 text-slate-900 sm:px-6 sm:py-6">
-      {navigation}
       <div className="mb-4 flex items-center gap-2.5 text-sm font-semibold">
         <span className="grid size-8 place-items-center rounded-md bg-emerald-100 text-emerald-800">
           <ChartNoAxesColumnIncreasing size={18} />

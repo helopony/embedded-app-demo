@@ -2,8 +2,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, Fingerprint } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-
-export type ForecastRow = { day: string; orders: number };
+import type { Forecast, ForecastRow } from "./forecast-data";
 
 function OrderChart({ rows }: { rows: ForecastRow[] }) {
   const highest = Math.max(1, ...rows.map(row => row.orders));
@@ -75,14 +74,13 @@ function ForecastTable({ rows }: { rows: ForecastRow[] }) {
 }
 
 type ForecastViewProps = {
-  rows: ForecastRow[];
-  actor: string;
-  scope: string;
+  forecast: Forecast;
   detailed: boolean;
   onNavigate: (path: string) => void;
 };
 
-export function ForecastView({ rows, actor, scope, detailed, onNavigate }: ForecastViewProps) {
+export function ForecastView({ forecast, detailed, onNavigate }: ForecastViewProps) {
+  const { rows, actor, scope } = forecast;
   return (
     <>
       {detailed ? <ForecastTable rows={rows} /> : <ForecastOverview rows={rows} />}
@@ -93,7 +91,7 @@ export function ForecastView({ rows, actor, scope, detailed, onNavigate }: Forec
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-600">
         <Fingerprint size={14} className="text-emerald-700" />
-        <span>Authenticated as <strong className="font-medium text-slate-800">{actor}</strong></span>
+        <span>Authenticated as <strong className="font-medium text-slate-800">{actor.name}</strong></span>
         <code className="rounded bg-slate-100 px-1.5 py-0.5">{scope}</code>
         <button type="button" className="font-medium text-emerald-700 underline underline-offset-2" onClick={() => onNavigate("/authentication")}>
           Inspect authentication
