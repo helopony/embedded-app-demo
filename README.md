@@ -17,8 +17,8 @@ The workspace opens its own session and displays the signed-in staff member and 
 
 | Part | Location | Responsibility |
 |---|---|---|
-| Host UI | `apps/admin` | Owns the outer sidebar and URL, creates the iframe, obtains launch assertions, displays the inspector. |
-| Partner test app | `apps/test-app` | Declares navigation with `<workspace-app-nav>`, displays the forecast, requests identity via the bridge. |
+| Host UI | [admin-shell.tsx](apps/admin/admin-shell.tsx) | Connects the iframe to the host bridge, synchronizes the outer URL, and supplies launch assertions. |
+| Partner test app | [partner-app.tsx](apps/test-app/partner-app.tsx) | Publishes its menu through `<workspace-app-nav>` and requests a launch assertion before fetching the forecast. |
 | Bridge library | `packages/bridge` | Implements the typed, versioned handshake, origin/window checks, navigation updates, request timeouts and cleanup. |
 | Mock backend | `app/api`, `lib/mock-auth` | Supplies a signed demo session, token exchange and the protected sales endpoint. |
 | Manifest v1 | [app.manifest.json](apps/test-app/app.manifest.json) | Registers the app ID, name, partner origin, logical home path, bridge version and granted scope. |
