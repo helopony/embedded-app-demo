@@ -12,6 +12,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/embed/authentication", partnerOrigin()));
   }
   const embedded = pathname === "/embed" || pathname.startsWith("/embed/");
+  if (embedded && role === "partner" && !isPartnerOrigin(origin) && (request.method === "GET" || request.method === "HEAD")) {
+    return NextResponse.redirect(new URL(pathname + request.nextUrl.search, partnerOrigin()));
+  }
   const api = pathname.startsWith("/api/");
   const partnerRoute = embedded || pathname.startsWith("/api/partner/");
   if (partnerRoute ? role === "host" || !isPartnerOrigin(origin) : role === "partner" || !isHostOrigin(origin)) {

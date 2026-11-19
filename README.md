@@ -57,13 +57,13 @@ For an installed desktop Chrome, use `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 
 ## Hosting
 
-The workspace and partner run as independent Vercel projects, with separate deployments and server environments. The workspace serves its admin UI, first-party session endpoint, authorization server and sales API. The partner serves its iframe UI and forecast backend. Its server makes HTTPS requests back to the workspace to exchange the assertion and fetch sales. [Workspace](https://app-workspace.helopony.com) · [Standalone partner app](https://forecast-partner-helopony.vercel.app)
+The workspace and partner run as independent Vercel projects, with separate deployments and server environments. The workspace serves its admin UI, first-party session endpoint, authorization server and sales API. The partner serves its iframe UI and forecast backend. Its server makes HTTPS requests back to the workspace to exchange the assertion and fetch sales. [Workspace](https://app-workspace.helopony.com) · [Standalone partner app](https://forecast-partner.helopony.com)
 
 | Server setting | Workspace project | Partner project |
 |---|---|---|
 | `WORKSPACE_DEPLOYMENT_ROLE` | `host` | `partner` |
 | `WORKSPACE_HOST_ORIGIN` | `https://app-workspace.helopony.com` | Same value |
-| `WORKSPACE_PARTNER_ORIGIN` | `https://forecast-partner-helopony.vercel.app` | Same value |
+| `WORKSPACE_PARTNER_ORIGIN` | `https://forecast-partner.helopony.com` | Same value |
 | `WORKSPACE_EXTRA_HOST_ORIGINS` | Optional comma-separated list of approved host origins | Same allowlist |
 | `DEMO_SIGNING_SECRET` | Signs and verifies the demo credentials | Omit |
 | `DEMO_CLIENT_SECRET` | Verifies the client credential during exchange | Authenticates the partner during exchange |
