@@ -6,12 +6,14 @@ import { createAppBridge } from "@sides/bridge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Authentication, readLaunchClaims, StandaloneCheck, type AuthorizationReceipt } from "./authentication";
 
 type Props = { hostOrigin: string; initialPath: string };
 type Forecast = {
   store: { name: string };
   actor: { name: string };
   scope: string;
+  authorization: AuthorizationReceipt;
   rows: { day: string; orders: number }[];
 };
 
@@ -37,7 +39,7 @@ function OrderChart({ rows }: { rows: Forecast["rows"] }) {
 export default function PartnerApp({ hostOrigin, initialPath }: Props) {
   const bridge = useRef<ReturnType<typeof createAppBridge> | null>(null);
   const [path, setPath] = useState(initialPath);
-  const [data, setData] = useState<Forecast | null>(null);
+  const [data, setData] = useState<(Forecast & { claims: ReturnType<typeof readLaunchClaims> }) | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [standalone, setStandalone] = useState(false);
@@ -73,6 +75,7 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
       if (!session) return;
       setLoading(true);
       setError("");
+      setData(null);
       // Mint a fresh launch assertion for every read, including retries.
       const assertion = await session.getAssertion();
       if (controller.signal.aborted) return;
@@ -83,7 +86,7 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
         ? "The partner could not verify this session. Request a fresh assertion to retry."
         : "The forecast service could not complete the request.");
       const result: Forecast = await response.json();
-      if (!controller.signal.aborted) setData(result);
+      if (!controller.signal.aborted) setData({ ...result, claims: readLaunchClaims(assertion) });
     }
     readForecast().catch((failure: unknown) => {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Unable to load the forecast.");
@@ -101,6 +104,7 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
   }
 
   const isForecast = path === "/forecast";
+  const isAuthentication = path === "/authentication";
   const total = data?.rows.reduce((sum, row) => sum + row.orders, 0) ?? 0;
   const peak = data?.rows.reduce<Forecast["rows"][number] | undefined>((top, row) =>
     !top || row.orders > top.orders ? row : top, undefined);
@@ -108,26 +112,25 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
   return <main className="min-h-screen bg-white px-4 py-5 text-slate-900 sm:px-6 sm:py-6">
     {createElement("sides-app-nav", { hidden: true },
       <a href="/overview">Overview</a>,
-      publishForecast ? <a href="/forecast">Forecast</a> : null
+      publishForecast ? <a href="/forecast">Forecast</a> : null,
+      <a href="/authentication">Authentication</a>
     )}
     <div className="mb-4 flex items-center gap-2.5 text-sm font-semibold">
       <span className="grid size-8 place-items-center rounded-md bg-emerald-100 text-emerald-800"><ChartNoAxesColumnIncreasing size={18} /></span>Demand Forecast
     </div>
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-[26px] font-semibold tracking-tight">{isForecast ? "Order forecast" : "Overview"}</h1>
-        <p className="mt-1 text-sm text-slate-600">{data ? data.store.name : "Restaurant demand planning"}</p>
+      <div><h1 className="text-[26px] font-semibold tracking-tight">{isAuthentication ? "Authentication" : isForecast ? "Order forecast" : "Overview"}</h1>
+        <p className="mt-1 text-sm text-slate-600">{isAuthentication ? "What SIDES shared for this request" : data ? data.store.name : "Restaurant demand planning"}</p>
       </div>
-      {data && <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)} aria-label="Refresh forecast data">
-        <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+      {data && <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)} aria-label={isAuthentication ? "Run authentication again" : "Refresh forecast data"}>
+        <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> {isAuthentication ? "Run authentication again" : "Refresh"}
       </Button>}
     </div>
-    {standalone ? <Card className="gap-2 rounded-lg p-5">
-      <h2 className="font-semibold">SIDES session required</h2><p className="text-sm text-slate-600">Open Demand Forecast from the SIDES workspace to load store data.</p>
-      {hostOrigin && <a className="text-sm font-medium text-emerald-700 underline" href={hostOrigin + "/"}>Open SIDES workspace</a>}
-    </Card> : error ? <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+    {standalone ? <StandaloneCheck hostOrigin={hostOrigin} /> : error ? <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
       <div className="flex items-start gap-2"><CircleAlert size={16} className="mt-0.5 shrink-0" /><p>{error}</p></div>
       <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setAttempt(value => value + 1)}>Retry authentication</Button>
-    </div> : data ? <>
+    </div> : data && isAuthentication ? <Authentication claims={data.claims} authorization={data.authorization}
+      actor={data.actor.name} store={data.store.name} days={data.rows.length} /> : data ? <>
       {isForecast ? <Card className="block gap-0 overflow-hidden rounded-lg p-0 shadow-none">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">Forecast daily order counts</caption>
@@ -151,9 +154,10 @@ export default function PartnerApp({ hostOrigin, initialPath }: Props) {
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-600">
         <Fingerprint size={14} className="text-emerald-700" /><span>Authenticated as <strong className="font-medium text-slate-800">{data.actor.name}</strong></span><code className="rounded bg-slate-100 px-1.5 py-0.5">{data.scope}</code>
+        <button type="button" className="font-medium text-emerald-700 underline underline-offset-2" onClick={() => navigate("/authentication")}>Inspect authentication</button>
       </div>
     </> : <p role="status" className="flex items-center gap-2 rounded-lg border border-slate-200 p-4 text-sm text-slate-600"><LoaderCircle size={16} className="animate-spin" /> Authenticating with SIDES…</p>}
-    {!standalone && <label className="mt-4 inline-flex min-h-8 cursor-pointer items-center gap-2 text-xs text-slate-600">
+    {!standalone && !isAuthentication && <label className="mt-4 inline-flex min-h-8 cursor-pointer items-center gap-2 text-xs text-slate-600">
       <input type="checkbox" checked={publishForecast} onChange={event => setPublishForecast(event.target.checked)}
         className="size-4 shrink-0 accent-emerald-700" />
       Show Forecast in SIDES menu

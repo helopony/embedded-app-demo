@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import { Activity, ArrowUpRight, Boxes, Braces, ChartNoAxesColumnIncreasing, Check, ChevronRight, Circle, LayoutGrid, Link2, LoaderCircle, Plug, RotateCw, Terminal } from "lucide-react";
+import { Activity, ArrowUpRight, Boxes, ChartNoAxesColumnIncreasing, Check, ChevronRight, Circle, LayoutGrid, Link2, LoaderCircle, Plug, RotateCw, Terminal } from "lucide-react";
 import { createHostBridge, type NavItem } from "@sides/bridge";
 import type { AppManifest } from "@/lib/manifest";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,21 @@ import { Card } from "@/components/ui/card";
 
 type Props = { appOrigin: string; manifest: AppManifest; initialPath: string };
 type EventEntry = { id: number; label: string; time: string };
+
+function Walkthrough() {
+  return <ol aria-label="How the prototype works" className="list-decimal space-y-4 py-4 pr-4 pl-9 text-sm leading-relaxed text-slate-600 marker:font-mono marker:text-emerald-700">
+    <li><h3 className="font-semibold text-slate-900">SIDES opens the partner</h3>
+      The installed manifest gives SIDES the partner origin, home route and requested permissions. The admin loads the app in a cross-origin iframe.</li>
+    <li><h3 className="font-semibold text-slate-900">The app publishes its menu</h3>
+      Inside the iframe, a <code>MutationObserver</code> watches <code>&lt;sides-app-nav&gt;</code>. The bridge sends link labels and paths through <code>postMessage</code>. Each side checks the sender’s origin and window. SIDES renders the sidebar.</li>
+    <li><h3 className="font-semibold text-slate-900">SIDES identifies the session</h3>
+      The iframe asks for a launch assertion. The host sends its first-party session cookie to its own backend and gives the iframe a signed, 60-second JWT identifying the demo staff member, store and app installation.</li>
+    <li><h3 className="font-semibold text-slate-900">The partner reads sales</h3>
+      The partner server presents the assertion and its client credentials at the OAuth token endpoint. SIDES verifies them and issues a scoped access token for the sales API. Open <strong>Authentication</strong> in the sidebar to inspect the claims and both HTTP results.</li>
+    <li><h3 className="font-semibold text-slate-900">Try a direct visit</h3>
+      Choose <strong>Open partner app directly</strong>. In its own tab the partner has no SIDES parent to issue an assertion. Its forecast endpoint returns HTTP 401 with <code className="break-all">launch_assertion_required</code>.</li>
+  </ol>;
+}
 
 function outerRoute(appBase: string, home: string) {
   const { pathname, search, hash } = window.location;
@@ -32,7 +47,7 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
   const [connection, setConnection] = useState<"connecting" | "connected" | "timeout">("connecting");
   const [attempt, setAttempt] = useState(0);
   const [events, setEvents] = useState<EventEntry[]>([]);
-  const [inspector, setInspector] = useState<"events" | "manifest">("events");
+  const [inspector, setInspector] = useState<"How it works" | "Events" | "Manifest">("How it works");
 
   useEffect(() => { setHostOrigin(window.location.origin); }, []);
 
@@ -110,8 +125,11 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
     setAttempt(value => value + 1);
   }
 
-  const frameUrl = new URL("/embed" + framePath, appOrigin);
-  frameUrl.searchParams.set("hostOrigin", hostOrigin);
+  function partnerUrl(route: string) {
+    const url = new URL("/embed" + route, appOrigin);
+    url.searchParams.set("hostOrigin", hostOrigin);
+    return url.href;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 lg:grid lg:grid-cols-[215px_minmax(0,1fr)]">
@@ -151,27 +169,30 @@ export default function AdminShell({ appOrigin, manifest, initialPath }: Props) 
           </div>
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(245px,28%)]">
             <Card className="block min-w-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-sm">
-              <div className="flex min-h-11 items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/80 px-4 py-2">
+              <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-slate-200 bg-slate-50/80 px-4 py-2">
                 <span className="flex min-w-0 items-center gap-2 text-xs text-slate-600"><Link2 size={14} className="shrink-0" /><span className="truncate font-mono" title={appOrigin}>{new URL(appOrigin).host}</span></span>
-                <span className="shrink-0 text-xs text-slate-500">Partner iframe</span>
+                {hostOrigin && <a href={partnerUrl(path)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-7 items-center gap-1 text-xs font-medium text-emerald-800 underline underline-offset-2">
+                  Open partner app directly <ArrowUpRight aria-hidden size={13} />
+                </a>}
               </div>
               {connection === "timeout" && <div role="alert" className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm">
                 <span>The partner app did not connect.</span><Button variant="outline" size="sm" onClick={reconnect}><RotateCw size={13} /> Reconnect</Button>
               </div>}
-              {hostOrigin ? <iframe key={attempt} ref={iframe} title={manifest.name + " partner app"} src={frameUrl.href}
+              {hostOrigin ? <iframe key={attempt} ref={iframe} title={manifest.name + " partner app"} src={partnerUrl(framePath)}
                 sandbox="allow-scripts allow-same-origin" referrerPolicy="origin" className="block h-[650px] w-full border-0 sm:h-[600px]" /> :
                 <div className="grid h-[650px] place-items-center text-sm text-slate-500 sm:h-[600px]">Opening partner app…</div>}
             </Card>
             <Card className="block min-w-0 gap-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-sm">
               <div className="border-b border-slate-200 px-4 py-4"><h2 className="flex items-center gap-2 font-semibold"><Activity size={16} className="text-emerald-700" /> Bridge inspector</h2></div>
-              <div aria-label="Inspector view" className="mx-4 mt-4 flex rounded-lg bg-slate-100 p-1">
-                {(["events", "manifest"] as const).map(view => <button key={view} type="button" aria-pressed={inspector === view} onClick={() => setInspector(view)}
-                  className={`flex min-h-8 flex-1 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium capitalize ${inspector === view ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
-                  {view === "manifest" ? <Braces size={13} /> : <Activity size={13} />}{view}
+              <div role="group" aria-label="Inspector view" className="mx-3 mt-3 flex flex-wrap gap-0.5 rounded-lg bg-slate-100 p-1">
+                {(["How it works", "Events", "Manifest"] as const).map(view => <button key={view} type="button" aria-pressed={inspector === view} onClick={() => setInspector(view)}
+                  className={`min-h-8 grow rounded-md px-2 text-xs font-medium ${inspector === view ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
+                  {view}
                 </button>)}
               </div>
-              {inspector === "manifest" ? <div className="px-4 py-4"><pre aria-label="App manifest" className="whitespace-pre-wrap break-all rounded-md bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-700">{JSON.stringify(manifest, null, 2)}</pre></div> :
-                <div className="p-4">
+              {inspector === "How it works" && <Walkthrough />}
+              {inspector === "Manifest" && <div className="px-4 py-4"><pre aria-label="App manifest" className="whitespace-pre-wrap break-all rounded-md bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-700">{JSON.stringify(manifest, null, 2)}</pre></div>}
+              {inspector === "Events" && <div className="p-4">
                   {events.length ? <ol aria-label="Bridge events" className="max-h-[410px] overflow-y-auto">
                     {events.map(entry => <li key={entry.id} className="flex items-start gap-2.5 border-b border-slate-100 py-2.5 first:pt-0 last:border-b-0">
                       <ArrowUpRight size={13} className="mt-0.5 shrink-0 text-emerald-700" /><div className="min-w-0"><p className="break-words text-xs font-medium leading-5 text-slate-800">{entry.label}</p><time className="font-mono text-[10px] text-slate-500">{entry.time}</time></div>
